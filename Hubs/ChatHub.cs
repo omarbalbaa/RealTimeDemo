@@ -11,6 +11,11 @@ public class ChatHub : Hub
         _logger = logger;
     }
 
+    public async Task SendMessage(string message, string user)
+    {
+        await Clients.All.SendAsync("ReceiveMessage", message, user);
+    }
+
     public override async Task OnConnectedAsync()
     {
         _logger.LogInformation($"Client Connected {Context.ConnectionId}");
