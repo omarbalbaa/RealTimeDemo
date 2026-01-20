@@ -42,8 +42,9 @@ public class ChatHub : Hub
 
     public override async Task OnConnectedAsync()
     {
-        _logger.LogInformation($"Client Connected {Context.ConnectionId}");
         var groupName = "Group 1";
+        _logger.LogInformation($"Client Connected {Context.ConnectionId}");
+        await ConnectionState.AddConnectionToGroup(Context.ConnectionId, groupName);
         await JoinGroup(groupName);
         await SendPrivateMessage(Context.ConnectionId, "SERVER: Welcome to the chat!");
         await SendPrivateMessage(Context.ConnectionId, $"SERVER: You have been added to {groupName}");
@@ -86,7 +87,9 @@ public class ChatHub : Hub
     }
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
+        var groupName = "Group 1";
         var errorMessage = exception?.Message ?? "No error";
+        await ConnectionState.RemoveConnectionFromGroup(Context.ConnectionId, groupName);
         _logger.LogInformation($"Client disconnected {Context.ConnectionId}. Error {errorMessage}");
         await base.OnDisconnectedAsync(exception);
     }
