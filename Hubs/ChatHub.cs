@@ -42,18 +42,18 @@ public class ChatHub : Hub
 
     public override async Task OnConnectedAsync()
     {
-        var groupName = "Group 1";
         _logger.LogInformation($"Client Connected {Context.ConnectionId}");
-        await ConnectionState.AddConnectionToGroup(Context.ConnectionId, groupName);
-        await JoinGroup(groupName);
         await SendPrivateMessage(Context.ConnectionId, "SERVER: Welcome to the chat!");
-        await SendPrivateMessage(Context.ConnectionId, $"SERVER: You have been added to {groupName}");
         await base.OnConnectedAsync();
     }
 
-    public async Task JoinGroup(string groupName)
+    public async Task RegisterClient(string groupName, string connectionName)
     {
+        await ConnectionState.AddConnectionName(Context.ConnectionId, connectionName);
         await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+        await ConnectionState.AddConnectionToGroup(Context.ConnectionId, groupName);
+        var onlineConnectionNamesInGroup = await ConnectionState.GetOnlineUsersForGroup(Context.ConnectionId, groupName);
+        await Clients.Group(groupName).SendAsync("UpdateConnectionNames", onlineConnectionNamesInGroup);
     }
 
     public async Task LeaveGroup(string groupName)
@@ -69,6 +69,11 @@ public class ChatHub : Hub
     public async Task SendToUser(string userId, string message)
     {
         await Clients.User(userId).SendAsync("ReceiveMessage", message);
+    }
+
+    public async Task SendToGroup(string groupName, string message)
+    {
+        await Clients.Group(groupName).SendAsync("ReceiveMessage", message);
     }
 
     public async Task BroadcastToAll(string message)
@@ -87,9 +92,17 @@ public class ChatHub : Hub
     }
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        var groupName = "Group 1";
         var errorMessage = exception?.Message ?? "No error";
-        await ConnectionState.RemoveConnectionFromGroup(Context.ConnectionId, groupName);
+
+        var groupsToUpdate = await ConnectionState.GetGroupsForConnectionId(Context.ConnectionId);
+
+        await ConnectionState.RemoveConnectionFromAllGroups(Context.ConnectionId);
+        await ConnectionState.RemoveConnectionName(Context.ConnectionId);
+        groupsToUpdate.ForEach(async x =>
+        {
+            var onlineGroupUsers = await ConnectionState.GetOnlineUsersForGroup(Context.ConnectionId, x);
+            await Clients.Group(x).SendAsync("UpdateConnectionNames", onlineGroupUsers);
+        });
         _logger.LogInformation($"Client disconnected {Context.ConnectionId}. Error {errorMessage}");
         await base.OnDisconnectedAsync(exception);
     }
