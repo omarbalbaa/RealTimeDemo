@@ -22,6 +22,7 @@ var app = builder.Build();
 app.UseHttpsRedirection();
 app.UseCors("dev");
 app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<StockHub>("/hubs/stocks");
 app.MapGet("/", () => "Hello");
 
 app.Run();
