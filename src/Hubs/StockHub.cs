@@ -6,6 +6,32 @@ namespace RealTimeDemo.Hubs;
 
 public class StockHub : Hub
 {
+    private static readonly string[] Symbols = {"MSFT", "AAPL", "GOOG", "TSLA"};
+    private static readonly Random Random = new ();
+    public async IAsyncEnumerable<byte[]> DownloadFile([EnumeratorCancellation]CancellationToken cancellationToken)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "default.png");
+        if (!File.Exists(path))
+        {
+            yield break;
+        }
+        var data = await File.ReadAllBytesAsync(path, cancellationToken);
+        var chunkSize = 1024;
+
+        for (int i = 0; i < data.Length; i += chunkSize)
+        {
+            var chunk = data.Skip(i).Take(chunkSize).ToArray();
+            yield return chunk;
+            await Task.Delay(100, cancellationToken);
+        }
+    }
+    public async Task UploadBytes(ChannelReader<byte[]> stream)
+    {
+        await foreach (var chunk in stream.ReadAllAsync())
+        {
+            Console.WriteLine($"Received {chunk.Length} bytes");
+        }
+    }
     public async Task UploadNumber(ChannelReader<int> reader)
     {
         await foreach (var number in reader.ReadAllAsync())
@@ -13,24 +39,27 @@ public class StockHub : Hub
             Console.WriteLine($"Received number: {number}");
         }
     }
-    public async IAsyncEnumerable<object> StreamStockPrices([EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<StockPrice> StreamStockPrices([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var random = new Random();
         while (!cancellationToken.IsCancellationRequested)
         {
-            yield return new StockPrices()
+            foreach (var symbol in Symbols)
             {
-                Symbol = "MSFT",
-                Price = Math.Round(250 + random.NextDouble() * 2, 2),
+            yield return new StockPrice()
+            {
+                Symbol = symbol,
+                Price = Math.Round(100 + Random.NextDouble() * 900, 2),
                 TimeStamp = DateTime.UtcNow
             };
+            }
 
             await Task.Delay(1000, cancellationToken);
         }
     }
 }
 
-public record StockPrices
+public record StockPrice
 {
     public string? Symbol {get; set;}
     public double Price {get; set;}

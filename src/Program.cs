@@ -1,7 +1,8 @@
 using RealTimeDemo.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddSignalR();
+builder.Services.AddSignalR()
+    .AddMessagePackProtocol();
 
 builder.Services.AddCors(options =>
 {
