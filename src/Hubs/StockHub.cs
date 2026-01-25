@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace RealTimeDemo.Hubs;
@@ -39,6 +40,8 @@ public class StockHub : Hub
             Console.WriteLine($"Received number: {number}");
         }
     }
+
+    [Authorize("PaidSubscriber")]
     public async IAsyncEnumerable<StockPrice> StreamStockPrices([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var random = new Random();

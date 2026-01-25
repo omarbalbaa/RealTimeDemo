@@ -47,6 +47,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         }
     };
 });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("PaidSubscriber", p =>
+    {
+        p.RequireClaim("subscription", "pro", "enterprise");
+    });
+});
 builder.Services.AddSignalR().AddMessagePackProtocol();
 builder.Services.AddCors(options =>
 {
@@ -79,18 +87,40 @@ app.MapPost("/login", (UserLogin login) =>
 {
     if (login.Username != "admin" || login.Password != "password")
     {
-        return Results.Unauthorized();
+        if (login.Username != "admin-pro" || login.Password != "password")
+        {
+            return Results.Unauthorized();
+        }
     }
-    var claims = new[] {new Claim(JwtRegisteredClaimNames.Sub, login.Username)};
+
+    Claim[] claims = null;
+
+    if (login.Username == "admin-pro")
+    {
+        claims = new[]
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, login.Username),
+            new Claim ("subscription", "pro", "enterprise")
+        };
+    }
+    else
+    {
+        claims = new[]
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, login.Username)
+        };
+    }
+
     var accessToken = GenerateJwtToken(claims, accessKey!, issuer!, audience!, TimeSpan.FromMinutes(30));
     var refreshToken = GenerateJwtToken(claims, refreshKey!, issuer!, audience!, TimeSpan.FromDays(7));
-    
+
     refreshTokens.Add(refreshToken, login.Username);
 
-    return Results.Ok(new {
+    return Results.Ok(new
+    {
         access_token = accessToken,
         refresh_token = refreshToken
-        });
+    });
 });
 
 app.MapPost("refreshToken", (TokenPair tokenPair) =>
@@ -119,7 +149,7 @@ app.MapPost("refreshToken", (TokenPair tokenPair) =>
         }
 
         var newAccessToken = GenerateJwtToken(principal.Claims, accessKey, issuer, audience, TimeSpan.FromMinutes(30));
-        return Results.Ok(new { access_token = newAccessToken});
+        return Results.Ok(new { access_token = newAccessToken });
     }
     catch
     {
@@ -129,7 +159,7 @@ app.MapPost("refreshToken", (TokenPair tokenPair) =>
 
 app.Run();
 
-static string GenerateJwtToken (IEnumerable<Claim> claims, string accessKey, string issuer, string audience, TimeSpan lifeTime)
+static string GenerateJwtToken(IEnumerable<Claim> claims, string accessKey, string issuer, string audience, TimeSpan lifeTime)
 {
     var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(accessKey));
     var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
