@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Security.Claims;
 
 namespace RealTimeDemo.Hubs;
 
@@ -6,6 +7,7 @@ public static class ConnectionState
 {
     private static readonly ConcurrentDictionary<string, List<string>> _groups = new();
     private static readonly ConcurrentDictionary<string, string> _connectionNames = new ();
+    public static ConcurrentBag<ClaimsPrincipal> OnlineUsers { get; } = new ();
     public async static Task<List<string>> GetGroupsForConnectionId(string connectionId)
     {
         var groups = _groups.Where(x => x.Value.Contains(connectionId)).Select(z => z.Key).ToList();

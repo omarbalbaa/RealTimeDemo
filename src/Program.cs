@@ -13,9 +13,6 @@ var refreshKey = builder.Configuration["JWT:RefreshKey"];
 var issuer = builder.Configuration["JWT:Issuer"];
 var audience = builder.Configuration["JWT:Audience"];
 
-// access token nLMIEHdQ1qsYp3QiV7GVi6dG7XJWtIHOE+fzGGs7DTw=
-// refresh token 7YTS6G0S8qeEpCmzvHevmmnjBmIk7sUOZOM3IPP8I6E=
-
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 .AddJwtBearer(options =>
 {
@@ -93,14 +90,23 @@ app.MapPost("/login", (UserLogin login) =>
         }
     }
 
-    Claim[] claims = null;
+    Claim[] claims = null!;
 
     if (login.Username == "admin-pro")
     {
         claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Sub, login.Username),
-            new Claim ("subscription", "pro", "enterprise")
+            new Claim (JwtRegisteredClaimNames.Sub, login.Username),
+            new Claim ("subscription", "pro", "enterprise"),
+            new Claim (ClaimTypes.Role, "Sales")
+        };
+    }
+    else if (login.Username == "admin")
+    {
+        claims = new[]
+        {
+            new Claim (JwtRegisteredClaimNames.Sub, login.Username),
+            new Claim (ClaimTypes.Role, "Sales")
         };
     }
     else
@@ -148,7 +154,7 @@ app.MapPost("refreshToken", (TokenPair tokenPair) =>
             return Results.Unauthorized();
         }
 
-        var newAccessToken = GenerateJwtToken(principal.Claims, accessKey, issuer, audience, TimeSpan.FromMinutes(30));
+        var newAccessToken = GenerateJwtToken(principal.Claims, accessKey!, issuer!, audience!, TimeSpan.FromMinutes(30));
         return Results.Ok(new { access_token = newAccessToken });
     }
     catch

@@ -7,9 +7,9 @@ namespace RealTimeDemo.Hubs;
 
 public class StockHub : Hub
 {
-    private static readonly string[] Symbols = {"MSFT", "AAPL", "GOOG", "TSLA"};
-    private static readonly Random Random = new ();
-    public async IAsyncEnumerable<byte[]> DownloadFile([EnumeratorCancellation]CancellationToken cancellationToken)
+    private static readonly string[] Symbols = { "MSFT", "AAPL", "GOOG", "TSLA" };
+    private static readonly Random Random = new();
+    public async IAsyncEnumerable<byte[]> DownloadFile([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var path = Path.Combine(AppContext.BaseDirectory, "default.png");
         if (!File.Exists(path))
@@ -49,12 +49,12 @@ public class StockHub : Hub
         {
             foreach (var symbol in Symbols)
             {
-            yield return new StockPrice()
-            {
-                Symbol = symbol,
-                Price = Math.Round(100 + Random.NextDouble() * 900, 2),
-                TimeStamp = DateTime.UtcNow
-            };
+                yield return new StockPrice()
+                {
+                    Symbol = symbol,
+                    Price = Math.Round(100 + Random.NextDouble() * 900, 2),
+                    TimeStamp = DateTime.UtcNow
+                };
             }
 
             await Task.Delay(1000, cancellationToken);
@@ -64,7 +64,7 @@ public class StockHub : Hub
 
 public record StockPrice
 {
-    public string? Symbol {get; set;}
-    public double Price {get; set;}
-    public DateTime TimeStamp {get; set;}
+    public string? Symbol { get; set; }
+    public double Price { get; set; }
+    public DateTime TimeStamp { get; set; }
 }

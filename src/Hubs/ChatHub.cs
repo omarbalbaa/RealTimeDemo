@@ -12,7 +12,7 @@ public class ChatHub : Hub
         _logger = logger;
     }
 
-    public async Task SendMessage(string message, string user)
+    public async Task SendMessage(string user, string message)
     {
         if (message.StartsWith("[-COMMAND]"))
         {
@@ -20,6 +20,11 @@ public class ChatHub : Hub
 
             switch (message)
             {
+                case "totalsalesusers":
+                    var totalsalesusers = ConnectionState.OnlineUsers
+                        .Where(x => x.IsInRole("Sales")).Count();
+                        await Clients.Caller.SendAsync("ReceiveMessage", $"COMMAND RESPONSE: {totalsalesusers} ONLINE");
+                        return;
                 case "leavegroup1":
                     await Groups.RemoveFromGroupAsync(Context.ConnectionId, _lastConnectedId);
                     return;
@@ -49,11 +54,19 @@ public class ChatHub : Hub
 
     public async Task RegisterClient(string groupName, string connectionName)
     {
-        await ConnectionState.AddConnectionName(Context.ConnectionId, connectionName);
-        await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
-        await ConnectionState.AddConnectionToGroup(Context.ConnectionId, groupName);
-        var onlineConnectionNamesInGroup = await ConnectionState.GetOnlineUsersForGroup(Context.ConnectionId, groupName);
-        await Clients.Group(groupName).SendAsync("UpdateConnectionNames", onlineConnectionNamesInGroup);
+        if (Context.User!.IsInRole(groupName))
+        {
+            ConnectionState.OnlineUsers.Add(Context.User);
+            await ConnectionState.AddConnectionName(Context.ConnectionId, connectionName);
+            await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+            await ConnectionState.AddConnectionToGroup(Context.ConnectionId, groupName);
+            var onlineConnectionNamesInGroup = await ConnectionState.GetOnlineUsersForGroup(Context.ConnectionId, groupName);
+            await Clients.Group(groupName).SendAsync("UpdateConnectionNames", onlineConnectionNamesInGroup);
+        }
+        else
+        {
+            throw new UnauthorizedAccessException();
+        }
     }
 
     public async Task LeaveGroup(string groupName)
